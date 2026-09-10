@@ -430,7 +430,7 @@ Singleton {
                 property string groupColor: "layer1"
                 property bool floatStyleShadow: true // Show shadow behind bar when cornerStyle == 1 (Float)
                 property string borderless: "pills"
-                property string topLeftIcon: "spark" // Options: "distro" or any icon name in ~/.config/quickshell/ii/assets/icons
+                property string topLeftIcon: "spark" // Options: "distro" or any icon name in ~/.config/quickshell/end4-werry/assets/icons
                 property bool showBackground: true
                 property bool verbose: true
                 property bool vertical: false
@@ -520,6 +520,22 @@ Singleton {
 
             property JsonObject calendar: JsonObject {
                 property string locale: "en-GB"
+            }
+
+            property JsonObject cheatsheet: JsonObject {
+                // Use a nerdfont to see the icons
+                // 0: 󰖳  | 1: 󰌽 | 2: 󰘳 | 3:  | 4: 󰨡
+                // 5:  | 6:  | 7: 󰣇 | 8:  | 9: 
+                // 10:  | 11:  | 12:  | 13:  | 14: 󱄛
+                property string superKey: ""
+                property bool useMacSymbol: false
+                property bool splitButtons: false
+                property bool useMouseSymbol: false
+                property bool useFnSymbol: false
+                property JsonObject fontSize: JsonObject {
+                    property int key: Appearance.font.pixelSize.smaller
+                    property int comment: Appearance.font.pixelSize.smaller
+                }
             }
 
             property JsonObject conflictKiller: JsonObject {

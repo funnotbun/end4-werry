@@ -23,33 +23,10 @@ ContentPage {
         Qt.callLater(() => GlobalStates.settingsOpen = false)
     }
 
-    function runUpdateDots() {
-        const updateScript = `
-            set -e
-            DIR="$HOME/.config/quickshell"
-
-            # Download to temp first
-            rm -rf "$DIR/end4-pC-tmp"
-            git clone https://github.com/pctrade/end4-pC.git "$DIR/end4-pC-tmp"
-
-            # Apply update
-            rm -rf "$DIR/end4-pC-old"
-            [ -d "$DIR/end4-pC" ] && mv "$DIR/end4-pC" "$DIR/end4-pC-old"
-            mv "$DIR/end4-pC-tmp" "$DIR/end4-pC"
-
-            # Reload
-            killall qs 2>/dev/null || true
-            sleep 0.5
-            setsid qs -c end4-pC >/tmp/qs.log 2>&1 < /dev/null &
-            disown
-
-            # Cleanup
-            rm -rf "$DIR/end4-pC-old"
-        `
-
-        Quickshell.execDetached(["kitty", "--hold", "bash", "-c", updateScript])
-        Qt.callLater(() => GlobalStates.settingsOpen = false)
-    }
+    // NOTE (fork): upstream "Update Dots" removed. This config is a personal fork
+    // (end4-werry); pulling upstream would wipe fork changes. Update via git instead:
+    //   git -C ~/.config/quickshell/end4-werry pull upstream main
+    // then restart the shell.
 
     Rectangle {
         Layout.fillWidth: true
@@ -133,24 +110,8 @@ ContentPage {
                     }
                 }
             }
-            RowLayout {
-                Layout.alignment: Qt.AlignBottom | Qt.AlignRight
-                spacing: 8
-                RippleButton {
-                    buttonText: Translation.tr("Update Dots")
-                    buttonRadius: Appearance.rounding.full
-                    colBackground: Appearance.colors.colPrimaryContainer
-                    colBackgroundHover: Appearance.colors.colPrimaryContainerHover
-                    Layout.preferredHeight: 44
-                    downAction: () => runUpdateDots()
-                    contentItem: StyledText {
-                        text: parent.buttonText
-                        horizontalAlignment: Text.AlignHCenter
-                        leftPadding: 10
-                        rightPadding: 10
-                    }
-                }
-            }
+            // NOTE (fork): "Update Dots" button removed. This is a personal fork;
+            // update via git (see note above runSystemUpdate) instead.
         }
     }
 
