@@ -13,7 +13,12 @@ import Quickshell
 Column {
     id: root
     required property string categoryName
+    // All section names from the parser; passed down so "Custom" can catch orphans.
+    // (The parser only knows sections from --##! headings, so Shell:/Execute:/App:
+    // prefixes would otherwise be invisible.)
+    property var knownCategories: []
     readonly property bool isCategorized: categoryName?.length > 0
+    readonly property bool isCustom: categoryName === "Custom"
     property int maxBindWidth: 0
     property real columnSpacing: 40
     property real titleSpacing: 7
@@ -118,12 +123,29 @@ Column {
         return !!bind.comment && bind.comment.length > 0;
     }
 
+    function categoryPrefix(bind) {
+        const comment = bind.comment ?? "";
+        const i = comment.indexOf(":");
+        return i === -1 ? "" : comment.substring(0, i);
+    }
+
     function isCategory(bind, categoryName) {
-        return bind.comment.substring(0, bind.comment.indexOf(":")) === categoryName;
+        // Alias for the historical "App:" prefix (section is "Apps:")
+        let prefix = root.categoryPrefix(bind);
+        if (prefix === "App") prefix = "Apps";
+        return prefix === categoryName;
     }
 
     function isUncategorized(bind) {
-        return bind.comment.indexOf(":") === -1;
+        return (bind.comment ?? "").indexOf(":") === -1;
+    }
+
+    function isOrphan(bind) {
+        // Has a prefix, but it matches no known section -> shown under "Custom"
+        if (!root.hasDescription(bind) || root.isUncategorized(bind)) return false;
+        let prefix = root.categoryPrefix(bind);
+        if (prefix === "App") prefix = "Apps";
+        return !root.knownCategories.includes(prefix);
     }
 
     function containsNonFirstRepetitive(bind) {
@@ -149,8 +171,10 @@ Column {
     }
 
     function transformDescription(bind, categoryName) {
+        // Orphans shown under "Custom" keep their own prefix for stripping
+        const cat = (categoryName === "Custom") ? root.categoryPrefix(bind) : categoryName;
         const description = bind.comment
-        const regex = new RegExp("\\s*" + categoryName + "\\s*:\\s*");
+        const regex = new RegExp("\\s*" + cat + "\\s*:\\s*");
         const decategorized = description.replace(regex, "");
         if (!containsFirstRepetitive(bind)) return decategorized;
         const denumbered = decategorized.replace("1", "<Number>");
@@ -164,6 +188,9 @@ Column {
             id: repeater
             model: {
                 const flatBinds = root.flattenBinds(HyprlandKeybinds.keybinds);
+                if (root.isCustom) {
+                    return flatBinds.filter(bind => root.isOrphan(bind) && !root.containsNonFirstRepetitive(bind));
+                }
                 if (!root.isCategorized) {
                     return flatBinds.filter(bind => root.hasDescription(bind) && root.isUncategorized(bind) && !root.containsNonFirstRepetitive(bind));
                 }

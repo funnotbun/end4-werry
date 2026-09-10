@@ -42,10 +42,13 @@ Item {
             flow: Flow.TopToBottom
             spacing: 10
             Repeater {
-                model: [...root.keybindCategories, ""]
+                // "Custom" catches binds whose prefix matches no section (e.g. Shell:, Execute:);
+                // "" catches binds with no prefix at all.
+                model: [...root.keybindCategories, "Custom", ""]
                 delegate: CheatsheetKeybindsCategory {
                     required property var modelData
                     categoryName: modelData
+                    knownCategories: root.keybindCategories
                 }
             }
         }
