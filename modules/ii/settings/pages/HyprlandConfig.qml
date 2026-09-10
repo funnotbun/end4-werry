@@ -55,6 +55,7 @@ ContentPage {
             "input:repeat_delay":                   h.input.repeatDelay,
             "input:repeat_rate":                    h.input.repeatRate,
             "input:follow_mouse":                   h.input.followMouse,
+            "input:accel_profile":                  h.input.mouseAccel ? "adaptive" : "flat",
             "input:touchpad:natural_scroll":        h.input.touchpad.naturalScroll ? 1 : 0,
             "input:touchpad:disable_while_typing":  h.input.touchpad.disableWhileTyping ? 1 : 0,
             "input:touchpad:clickfinger_behavior":  h.input.touchpad.clickfingerBehavior ? 1 : 0,
@@ -450,6 +451,22 @@ ContentPage {
                             { displayName: Translation.tr("Loose"),    icon: "drag_pan",   value: 2 },
                             { displayName: Translation.tr("Explicit"), icon: "ads_click",  value: 3 },
                         ]
+                    }
+                }
+            }
+
+            ContentSubsection {
+                title: Translation.tr("Mouse")
+                GroupedList {
+                    ConfigSwitch {
+                        buttonIcon: "mouse"
+                        text: Translation.tr("Mouse acceleration")
+                        checked: Config.options.hyprland.input.mouseAccel
+                        onCheckedChanged: {
+                            if (checked === Config.options.hyprland.input.mouseAccel) return
+                            Config.options.hyprland.input.mouseAccel = checked
+                            HyprlandConfig.set("input:accel_profile", checked ? "adaptive" : "flat")
+                        }
                     }
                 }
             }

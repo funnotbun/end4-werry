@@ -193,6 +193,8 @@ Singleton {
                     property int repeatDelay: 250
                     property int repeatRate: 35
                     property int followMouse: 1
+                    // Mouse acceleration: true = adaptive profile, false = flat (no accel)
+                    property bool mouseAccel: true
                     property JsonObject touchpad: JsonObject {
                         property bool naturalScroll: false
                         property bool disableWhileTyping: true
