@@ -158,37 +158,23 @@ set_thumbnail_path() {
 }
 
 # Sync the login (SDDM) background with the effective lockscreen image.
-# Best-effort only: never fail the wallpaper switch if SDDM is missing or
-# the copy needs auth that the user cancels.
-# ponytail: pkexec fallback; skip polkit agent complexity until it hurts
+# Single fixed target (Backgrounds/background.jpg): no stale-file cleanup,
+# no theme-conf edits, no root prompts (fork lives in the user tree now).
+# Best-effort only: never fail the wallpaper switch.
+# ponytail: magick re-encode; plain-cp fallback still renders (Qt sniffs content).
+# Animated GIFs collapse to their first frame; videos sync via thumbnail.
 sync_sddm_background() {
     local src="$1"
     [[ -z "$src" || ! -f "$src" ]] && return 0
     case "${src##*.}" in
         mp4|MP4|webm|WEBM|mkv|MKV|avi|AVI|mov|MOV) return 0 ;; # videos: caller passes the thumbnail instead
     esac
-    local theme_dir="/usr/share/sddm/themes/ii-sddm-theme"
-    [[ -d "$theme_dir" ]] || return 0
-    local bg_dir="$theme_dir/Backgrounds"
-    local conf="$theme_dir/Themes/ii-sddm.conf"
-    local ext="${src##*.}"
-    [[ "$ext" == "$src" ]] && ext="jpg" # no extension in source name
-    ext="$(echo "$ext" | tr '[:upper:]' '[:lower:]')"
-    local dest="$bg_dir/background.$ext"
-    local line="Background=\"Backgrounds/background.$ext\""
-    if cp -f "$src" "$dest" 2>/dev/null; then
-        for stale in "$bg_dir"/background.*; do
-            [[ "$stale" == "$dest" ]] || rm -f "$stale" 2>/dev/null
-        done
-        if [[ -f "$conf" ]] && ! grep -qFx "$line" "$conf" 2>/dev/null; then
-            sed -i "s|^Background=.*|$line|" "$conf" 2>/dev/null || true
-        fi
-    elif command -v pkexec &>/dev/null; then
-        pkexec bash -c "
-            rm -f '$bg_dir'/background.* &&
-            cp -f '$src' '$dest' &&
-            { grep -qFx '$line' '$conf' 2>/dev/null || sed -i 's|^Background=.*|$line|' '$conf'; }
-        " 2>/dev/null || true
+    local dest="/usr/share/sddm/themes/ii-sddm-theme/Backgrounds/background.jpg"
+    [[ -d "$(dirname "$dest")" ]] || return 0
+    if command -v magick &>/dev/null; then
+        magick "$src" -quality 92 "$dest" 2>/dev/null || cp -f "$src" "$dest" 2>/dev/null || true
+    else
+        cp -f "$src" "$dest" 2>/dev/null || true
     fi
     return 0
 }
