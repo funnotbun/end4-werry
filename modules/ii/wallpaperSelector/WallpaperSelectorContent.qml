@@ -43,8 +43,8 @@ MouseArea {
         const cellW = item?.cellWidth ?? (wallpaperGridBackground.width / root.columns);
         const cellH = item?.cellHeight ?? (cellW / root.previewCellAspectRatio);
         const thumbnailSizeName = Images.thumbnailSizeNameForDimensions(cellW - totalImageMargin, cellH - totalImageMargin);
-        Wallpapers.setDirectory(`${Directories.pictures}/Wallpapers`);
-        Qt.callLater(() => Wallpapers.generateThumbnail(thumbnailSizeName));
+        // ponytail: generate for the current folder; don't yank the user back to Wallpapers
+        Wallpapers.generateThumbnail(thumbnailSizeName);
     }
 
     function handleFilePasting(event) {
@@ -562,6 +562,30 @@ MouseArea {
                             sourceComponent: Toolbar {
                                 IconToolbarButton {
                                     implicitWidth: height
+                                    onClicked: Wallpapers.navigateBack()
+                                    text: "arrow_back"
+                                    StyledToolTip {
+                                        text: Translation.tr("Back (Alt+Left)")
+                                    }
+                                }
+                                IconToolbarButton {
+                                    implicitWidth: height
+                                    onClicked: Wallpapers.navigateForward()
+                                    text: "arrow_forward"
+                                    StyledToolTip {
+                                        text: Translation.tr("Forward (Alt+Right)")
+                                    }
+                                }
+                                IconToolbarButton {
+                                    implicitWidth: height
+                                    onClicked: Wallpapers.navigateUp()
+                                    text: "arrow_upward"
+                                    StyledToolTip {
+                                        text: Translation.tr("Parent folder (Alt+Up)")
+                                    }
+                                }
+                                IconToolbarButton {
+                                    implicitWidth: height
                                     onClicked: {
                                         Wallpapers.openFallbackPicker(root.useDarkMode);
                                         GlobalStates.wallpaperSelectorOpen = false;
@@ -691,10 +715,12 @@ MouseArea {
         target: GlobalStates
         function onWallpaperSelectorOpenChanged() {
             if (GlobalStates.wallpaperSelectorOpen && monitorIsFocused) {
-                if (root.source === "local")
+                if (root.source === "local") {
                     filterField.forceActiveFocus()
-                else
+                    root.updateThumbnails()
+                } else {
                     root.forceActiveFocus()
+                }
             } else if (!GlobalStates.wallpaperSelectorOpen) {
                 sortMenuPopup.visible = false;
                 Wallpapers.stopPreview();
@@ -707,6 +733,10 @@ MouseArea {
         function onChanged() {
             if (Config.options.wallpaperSelector.closeAfterSelection)
                 GlobalStates.wallpaperSelectorOpen = false;
+        }
+        // ponytail: newly entered folders have no thumbs yet; generate on arrival
+        function onEffectiveDirectoryChanged() {
+            if (GlobalStates.wallpaperSelectorOpen) root.updateThumbnails();
         }
     }
 }

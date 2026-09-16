@@ -247,10 +247,12 @@ Variants {
                 visible: !blurLoader.active && bgRoot.wallpaperAnimation !== "" && !centeredWallpaper.centeredShapeActive && !bgRoot.videoRevealed
                     && bgRoot.transitionProgress < 1.0
 
-                property var fromImage: previousWallpaper
-                property var toImage: wallpaper
-                property var source1: previousWallpaper
-                property var source2: wallpaper
+                // ponytail: proxies pre-crop via PreserveAspectCrop so the opaque
+                // .frag.qsb shaders sample screen-shaped textures (no judder on handover)
+                property var fromImage: fromSource
+                property var toImage: toSource
+                property var source1: fromSource
+                property var source2: toSource
                 property real time: 0.0
                 property real progress: bgRoot.transitionProgress
                 property real aspectX: width / height
@@ -269,6 +271,38 @@ Variants {
                     onTriggered: transitionEffect.time += interval / 1000.0
                 }
                 onVisibleChanged: if (!visible) transitionEffect.time = 0.0
+
+                Image {
+                    id: fromCrop
+                    anchors.fill: parent
+                    fillMode: Image.PreserveAspectCrop
+                    source: previousWallpaper.source
+                    cache: true
+                    smooth: true
+                    mipmap: true
+                }
+                Image {
+                    id: toCrop
+                    anchors.fill: parent
+                    fillMode: Image.PreserveAspectCrop
+                    source: wallpaper.source
+                    cache: true
+                    smooth: true
+                    mipmap: true
+                    asynchronous: true
+                }
+                ShaderEffectSource {
+                    id: fromSource
+                    sourceItem: fromCrop
+                    hideSource: true
+                    live: true
+                }
+                ShaderEffectSource {
+                    id: toSource
+                    sourceItem: toCrop
+                    hideSource: true
+                    live: true
+                }
             }
 
             Loader {

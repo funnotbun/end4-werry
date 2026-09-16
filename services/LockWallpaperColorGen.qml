@@ -11,7 +11,15 @@ Singleton {
     Connections {
         target: Config.options.background
         function onLockWallChanged() {
-            if (!Config.options.background.lockWall || Config.options.background.lockWall.length === 0) return
+            if (!Config.options.background.lockWall || Config.options.background.lockWall.length === 0) {
+                // "Same wallpaper for both": point SDDM back at the desktop image
+                genProc.command = [
+                    "bash", Directories.wallpaperSwitchScriptPath,
+                    "--sddm-sync", FileUtils.trimFileProtocol(Config.options.background.wallpaperPath)
+                ]
+                genProc.running = true
+                return
+            }
             genProc.command = [
                 "bash", Directories.wallpaperSwitchScriptPath,
                 "--colors_lock", "--image", FileUtils.trimFileProtocol(Config.options.background.lockWall)

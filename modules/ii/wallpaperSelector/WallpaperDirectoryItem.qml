@@ -130,6 +130,20 @@ Item {
 
                 }
 
+                // ponytail: placeholder so cells never look empty while thumbs generate
+                Rectangle {
+                    anchors.fill: parent
+                    radius: Appearance.rounding.small
+                    color: Appearance.colors.colLayer2
+                    visible: root.useThumbnail && thumbnailImageLoader.item?.status !== Image.Ready
+                    MaterialSymbol {
+                        anchors.centerIn: parent
+                        text: "image"
+                        iconSize: 32
+                        color: Appearance.colors.colSubtext
+                    }
+                }
+
             }
 
             StyledText {

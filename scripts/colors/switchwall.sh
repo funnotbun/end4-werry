@@ -157,6 +157,56 @@ set_thumbnail_path() {
     fi
 }
 
+# Sync the login (SDDM) background with the effective lockscreen image.
+# Best-effort only: never fail the wallpaper switch if SDDM is missing or
+# the copy needs auth that the user cancels.
+# ponytail: pkexec fallback; skip polkit agent complexity until it hurts
+sync_sddm_background() {
+    local src="$1"
+    [[ -z "$src" || ! -f "$src" ]] && return 0
+    case "${src##*.}" in
+        mp4|MP4|webm|WEBM|mkv|MKV|avi|AVI|mov|MOV) return 0 ;; # videos: caller passes the thumbnail instead
+    esac
+    local theme_dir="/usr/share/sddm/themes/ii-sddm-theme"
+    [[ -d "$theme_dir" ]] || return 0
+    local bg_dir="$theme_dir/Backgrounds"
+    local conf="$theme_dir/Themes/ii-sddm.conf"
+    local ext="${src##*.}"
+    [[ "$ext" == "$src" ]] && ext="jpg" # no extension in source name
+    ext="$(echo "$ext" | tr '[:upper:]' '[:lower:]')"
+    local dest="$bg_dir/background.$ext"
+    local line="Background=\"Backgrounds/background.$ext\""
+    if cp -f "$src" "$dest" 2>/dev/null; then
+        for stale in "$bg_dir"/background.*; do
+            [[ "$stale" == "$dest" ]] || rm -f "$stale" 2>/dev/null
+        done
+        if [[ -f "$conf" ]] && ! grep -qFx "$line" "$conf" 2>/dev/null; then
+            sed -i "s|^Background=.*|$line|" "$conf" 2>/dev/null || true
+        fi
+    elif command -v pkexec &>/dev/null; then
+        pkexec bash -c "
+            rm -f '$bg_dir'/background.* &&
+            cp -f '$src' '$dest' &&
+            { grep -qFx '$line' '$conf' 2>/dev/null || sed -i 's|^Background=.*|$line|' '$conf'; }
+        " 2>/dev/null || true
+    fi
+    return 0
+}
+
+# Effective login image: lockWall when set, else the desktop wallpaper.
+resolve_login_image() {
+    local desktop_img="$1"
+    local lock_wall=""
+    if [ -f "$SHELL_CONFIG_FILE" ]; then
+        lock_wall="$(jq -r '.background.lockWall // ""' "$SHELL_CONFIG_FILE" 2>/dev/null)"
+    fi
+    if [[ -n "$lock_wall" && "$lock_wall" != "null" && -f "$lock_wall" ]]; then
+        echo "$lock_wall"
+    else
+        echo "$desktop_img"
+    fi
+}
+
 categorize_wallpaper() {
     img_cat=$("$SCRIPT_DIR/../ai/gemini-categorize-wallpaper.sh" "$1")
     echo "$img_cat" > "$STATE_DIR/user/generated/wallpaper/category.txt"
@@ -259,12 +309,22 @@ switch() {
                 fi
                 exit 1
             fi
+            if [[ -n "$colors_lock_flag" ]]; then
+                sync_sddm_background "$thumbnail"
+            elif [[ -z "$colors_only_flag" ]]; then
+                sync_sddm_background "$(resolve_login_image "$thumbnail")"
+            fi
         else
             matugen_args+=(image "$imgpath")
             generate_colors_material_args=(--path "$imgpath")
             if [[ -z "$colors_only_flag" ]]; then
                 set_wallpaper_path "$imgpath"
                 remove_restore
+            fi
+            if [[ -n "$colors_lock_flag" ]]; then
+                sync_sddm_background "$imgpath"
+            elif [[ -z "$colors_only_flag" ]]; then
+                sync_sddm_background "$(resolve_login_image "$imgpath")"
             fi
         fi
     fi
@@ -375,6 +435,8 @@ main() {
     colors_lock_flag=""
     explicit_image=""
     start_dir_flag=""
+    sddm_sync_img=""
+    sddm_sync_flag=""
 
     get_type_from_config() {
         jq -r '.appearance.palette.type' "$SHELL_CONFIG_FILE" 2>/dev/null || echo "auto"
@@ -441,6 +503,11 @@ main() {
                 fi
                 shift
                 ;;
+            --sddm-sync)
+                sddm_sync_flag="1"
+                sddm_sync_img="$2"
+                shift 2
+                ;;
             *)
                 if [[ -z "$imgpath" ]]; then
                     imgpath="$1"
@@ -452,6 +519,11 @@ main() {
 
     if [[ -n "$noswitch_flag" && -n "$explicit_image" ]]; then
         colors_only_flag="1"
+    fi
+
+    if [[ -n "$sddm_sync_flag" ]]; then
+        sync_sddm_background "$sddm_sync_img"
+        exit 0
     fi
 
     config_color="$(get_accent_color_from_config)"
