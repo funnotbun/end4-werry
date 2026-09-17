@@ -68,19 +68,17 @@ LockScreen {
                     return;
                 }
 
-                var next = {}
+                var next = Object.assign({}, root.savedWorkspaces)
                 var batch = "keyword animation workspaces,1,7,menu_decel,slidevert; "
                 for (var i = 0; i < Quickshell.screens.length; ++i) {
                     var mon = Quickshell.screens[i].name
-                    var mData = HyprlandData.monitors.find(m => m.name === mon)
-                    if (mData?.activeWorkspace == undefined) {
-                        return;
-                    }
-                    var ws = (mData?.activeWorkspace?.id ?? 1)
+                    // ponytail: live Hyprland.monitors via WM, not stale HyprlandData hyprctl cache
+                    var ws = WM.activeWorkspaceForMonitor(mon)?.id ?? 0
+                    if (ws < 1 || ws > 100) continue; // unknown or already on temp, keep old save
                     next[mon] = ws
                     batch += `hyprctl dispatch 'hl.dsp.focus({monitor="${mon}"})'; hyprctl dispatch 'hl.dsp.focus({workspace=${2147483647 - ws}})';`
                 }
-                root.savedWorkspaces = next
+                if (Object.keys(next).length > 0) root.savedWorkspaces = next
                 Quickshell.execDetached(["bash", "-c", batch])
             } else {
                 if (Config.options.background.lockWall !== "") {
